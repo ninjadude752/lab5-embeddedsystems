@@ -16,10 +16,9 @@
 
 int main(void)
 {
-	
 	USART_Init(MYUBRR);
 	return 0;
-	
+}
  void USART_Init(unsigned int ubrr) {
 	/*set baud rate*/
 	UBRR0H = (unsigned char) (ubrr>>8);
@@ -49,6 +48,6 @@ int main(void)
 	str[i] = '\0';
 	*/
  
-}
+
 
 	
