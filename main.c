@@ -15,7 +15,8 @@
 #include <util/delay.h>
 
 int main(void)
-{
+{	
+	DDRC = 0b00110000;		// configure PC4(SDA), PC5(SCL) as output, other pins as inputs(potentiometer connected to PC0)
 	USART_Init(MYUBRR);
 	return 0;
 }
@@ -29,8 +30,6 @@ int main(void)
 	UCSR0C = (1<<USBS0) | (3<<UCSZ00);
 }
 	
-	
-	//DDRC = 0b00110000;		// configure PC4(SDA), PC5(SCL) as output, other pins as inputs
 	
 	/*
 	unsigned char c;
