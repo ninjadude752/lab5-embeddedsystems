@@ -23,8 +23,8 @@ int main()
 {	
 	DDRC = 0b00110000;		// configure PC4(SDA), PC5(SCL) as output, other pins as inputs(potentiometer connected to PC0)
 	USART_Init(MYUBRR);
-	unsigned char data[] = "Vin: ";
-	unsigned char newLine[] = "\n";
+	unsigned char data[] = "v = ";
+	unsigned char newLine[] = "V \n";
 	unsigned char str[20];
 	
 	ADCSRA = 0b10000111;		// enable ADC, set pre-scaler
@@ -33,32 +33,31 @@ int main()
 	float Vin;
 	
 	while(1){
-		ADCSRA = 0b11000111;
-		while (ADCSRA == 0b11000111);	// wait until the second bit is low
-		high = ADC;
-		Vin = high * 5 / 1024;
-		dtostrf(Vin, 6, 2, str);
-		
-		int i = 0;
-		while (data[i] != 0) {
-			USART_Transmit(data[i]);
-			i = i + 1;
+		unsigned char readIn = USART_Receive();
+		if (readIn == 'G') {
+			ADCSRA = 0b11000111;
+			while (ADCSRA == 0b11000111);	// wait until the second bit is low
+			high = ADC;
+			Vin = high * 5 / 1024;
+			dtostrf(Vin, 6, 2, str);
+			
+			int i = 0;
+			while (data[i] != 0) {			// print 
+				USART_Transmit(data[i]);
+				i = i + 1;
+			}
+			i = 0;
+			while (str[i] != 0) {			// Vin string
+				USART_Transmit(str[i]);
+				i = i + 1;
+			}
+			
+			i = 0;
+			while (newLine[i] != 0) {
+				USART_Transmit(newLine[i]);
+				i = i + 1;
+			}	
 		}
-		i = 0;
-		while (str[i] != 0) {			// Vin string
-			USART_Transmit(str[i]);
-			i = i + 1;
-		}
-		
-		i = 0;
-		while (newLine[i] != 0) {
-			USART_Transmit(newLine[i]);
-			i = i + 1;
-		}
-		
-		
-		
-		USART_Receive();
 	}
 	return 0;
 }
@@ -79,7 +78,6 @@ void USART_Transmit(unsigned char data) {
 
 unsigned char USART_Receive(void) {
 	while (!(UCSR0A & (1<<RXC0))) ;
-	
 	return UDR0;
 }
 	
