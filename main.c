@@ -2,7 +2,7 @@
  * Lab5Embbeded.c
  *
  * Created: 4/10/2023 2:50:09 PM
- * Author : xyuan13
+ * Author : Xinyi Yuan
  */ 
 
 #ifndef F_CPU
@@ -11,10 +11,14 @@
 #define FOSC 16000000
 #define BAUD 9600
 #define MYUBRR FOSC/16/BAUD-1
+#define slaveAddr  0b01011000		// slave addr
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include "twimaster.c"
+//#include "i2cmaster.h"
 
+/* function declaration */
 void USART_Init(unsigned int ubrr);
 void USART_Transmit(unsigned char data);
 unsigned char USART_Receive(void);
@@ -32,34 +36,55 @@ int main()
 	float high;
 	float Vin;
 	
+	i2c_init();
+	
 	while(1){
+		// ADC
 		unsigned char readIn = USART_Receive();
+		
 		if (readIn == 'G') {
 			ADCSRA = 0b11000111;
 			while (ADCSRA == 0b11000111);	// wait until the second bit is low
 			high = ADC;
 			Vin = high * 5 / 1024;
-			dtostrf(Vin, 6, 2, str);
-			
+			dtostrf(Vin, 2, 3, str);		// adc value, width, decimal place, char array
+		
 			int i = 0;
-			while (data[i] != 0) {			// print 
+			while (data[i] != 0) {			// print "v = "
 				USART_Transmit(data[i]);
 				i = i + 1;
 			}
 			i = 0;
-			while (str[i] != 0) {			// Vin string
+			while (str[i] != 0) {			// Vin value
 				USART_Transmit(str[i]);
 				i = i + 1;
 			}
 			
 			i = 0;
-			while (newLine[i] != 0) {
+			while (newLine[i] != 0) {		// print "V \n"
 				USART_Transmit(newLine[i]);
 				i = i + 1;
-			}	
+			}		
 		}
+		
+		// I2C
+		unsigned char access = i2c_start(slaveAddr);
+		if (access) {				// device not accessible
+			i2c_stop();
+		}
+		else {						// device accessible
+			i2c_readAck();
+			i2c_start_wait(slaveAddr);
+			i2c_write(0x00);		// command byte?
+			i2c_readAck();
+			// ... output byte
+			i2c_write(ADC);
+			i2c_readNak();
+			i2c_stop();				// end
+		}
+		
 	}
-	return 0;
+	
 }
  void USART_Init(unsigned int ubrr) {
 	/*set baud rate*/
@@ -82,22 +107,5 @@ unsigned char USART_Receive(void) {
 }
 	
 	
-	/*
-	unsigned char c;
-	char str[25];
-	int adH, adL, dac;
-	int i;
-	
-	// get the chars the user types at the PC keyboard into a char string
-	usart_prints("Please type 4 characters!");
-	for (i = 0; i < 4-1; i ++) {
-		c = usart_getc();	// Get character
-		usart_putc(c);		// Echo it back
-		str[i] = c;
-	}
-	str[i] = '\0';
-	*/
- 
-
 
 	
