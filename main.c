@@ -13,6 +13,7 @@
 #define MYUBRR FOSC/16/BAUD-1
 #include <avr/io.h>
 #include <util/delay.h>
+#include <stdio.h>
 
 void USART_Init(unsigned int ubrr);
 void USART_Transmit(unsigned char data);
@@ -22,21 +23,41 @@ int main()
 {	
 	DDRC = 0b00110000;		// configure PC4(SDA), PC5(SCL) as output, other pins as inputs(potentiometer connected to PC0)
 	USART_Init(MYUBRR);
-	unsigned char data[] = "hello world\n";
+	unsigned char data[] = "Vin: ";
+	unsigned char newLine[] = "\n";
+	unsigned char str[20];
 	
 	ADCSRA = 0b10000111;		// enable ADC, set pre-scaler
 	ADMUX = 0b01000000;			// AVcc with external capacitor at AREF pin
-	ADCSRA = 0b11000111;
-	while (ADCSRA == 0b11000111);	// wait until the second bit is low
-	float high = ADCH;
-	float low = ADCL;
+	float high;
+	float Vin;
 	
 	while(1){
+		ADCSRA = 0b11000111;
+		while (ADCSRA == 0b11000111);	// wait until the second bit is low
+		high = ADC;
+		Vin = high * 5 / 1024;
+		dtostrf(Vin, 6, 2, str);
+		
 		int i = 0;
 		while (data[i] != 0) {
 			USART_Transmit(data[i]);
 			i = i + 1;
 		}
+		i = 0;
+		while (str[i] != 0) {			// Vin string
+			USART_Transmit(str[i]);
+			i = i + 1;
+		}
+		
+		i = 0;
+		while (newLine[i] != 0) {
+			USART_Transmit(newLine[i]);
+			i = i + 1;
+		}
+		
+		
+		
 		USART_Receive();
 	}
 	return 0;
