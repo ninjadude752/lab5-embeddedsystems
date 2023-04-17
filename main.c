@@ -15,6 +15,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include <string.h>
 #include "twimaster.c"
 //#include "i2cmaster.h"
 
@@ -25,24 +26,35 @@ unsigned char USART_Receive(void);
 
 int main()
 {	
-	DDRC = 0b00110000;		// configure PC4(SDA), PC5(SCL) as output, other pins as inputs(potentiometer connected to PC0)
+	//DDRC = 0b00110000;		// configure PC4(SDA), PC5(SCL) as output, other pins as inputs(potentiometer connected to PC0)
 	USART_Init(MYUBRR);
 	unsigned char data[] = "v = ";
 	unsigned char newLine[] = "V \n";
+	unsigned char line[] = "\n";
 	unsigned char str[20];
-	
+	unsigned char readInArr[20];
+	unsigned char dacChannel[] = "DAC channel ";
 	ADCSRA = 0b10000111;		// enable ADC, set pre-scaler
 	ADMUX = 0b01000000;			// AVcc with external capacitor at AREF pin
 	float high;
 	float Vin;
 	
+
 	i2c_init();
 	
 	while(1){
 		// ADC
+		int i = 0;
 		unsigned char readIn = USART_Receive();
+		readInArr[0] = readIn;
+		while (readIn != '\n'){
+			readInArr[i] = readIn;
+			i = i + 1;
+			readIn = USART_Receive();
+		}
 		
-		if (readIn == 'G') {
+		if (readInArr[0] == 'G') {
+			strcpy(readInArr, "");
 			ADCSRA = 0b11000111;
 			while (ADCSRA == 0b11000111);	// wait until the second bit is low
 			high = ADC;
@@ -66,22 +78,46 @@ int main()
 				i = i + 1;
 			}		
 		}
+		else if (readInArr[0] == 'S') {
+			if (readInArr[1] == ',') {
+				if (readInArr[2] == '1' || readInArr[2] == '0') {
+					unsigned char temp = readInArr[2];
+					strncat(dacChannel, &temp, 1);
+					
+					// setting output voltage
+					// send start condition
+					i2c_start(slaveAddr);
+					if (readInArr == '0') {
+						// command byte
+						i2c_write(0x00);			// set DAC0 output
+					}
+					else {
+						i2c_write(0xff);			// set DAC1 output
+					}
+					// output byte
+					i2c_write(0x10);
+					i2c_stop();
+					
+					// printing
+					i = 0;
+					while (dacChannel[i] != 0) {			// print DAC 1 or DAC 0
+						USART_Transmit(dacChannel[i]);
+						i = i + 1;
+					}
+					strcpy(dacChannel, "DAC Channel ");
+					i = 0;
+					while (line[i] != 0) {					// print new line
+						USART_Transmit(line[i]);
+						i = i + 1;
+					}
+				}
+			}
+			else {
+				strcpy(readInArr, "");	// empty array
+			}
+			
+		}
 		
-		// I2C
-		unsigned char access = i2c_start(slaveAddr);
-		if (access) {				// device not accessible
-			i2c_stop();
-		}
-		else {						// device accessible
-			i2c_readAck();
-			i2c_start_wait(slaveAddr);
-			i2c_write(0x00);		// command byte?
-			i2c_readAck();
-			// ... output byte
-			i2c_write(ADC);
-			i2c_readNak();
-			i2c_stop();				// end
-		}
 		
 	}
 	
@@ -105,6 +141,8 @@ unsigned char USART_Receive(void) {
 	while (!(UCSR0A & (1<<RXC0))) ;
 	return UDR0;
 }
+
+
 	
 	
 
