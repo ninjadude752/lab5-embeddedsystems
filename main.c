@@ -86,42 +86,18 @@ int main()
 					if (readInArr[3] == ',') {
 						unsigned char temp = readInArr[2];
 						strncat(dacChannel, &temp, 1);
-						
-						int count;
-						for (count = 0; count < 4; ++count) {
-							v[count] = readInArr[count+4];
-						}
-						i = 0;
-						while (v[i] != 0) {
-							USART_Transmit(v[i]);
-							i = i + 1;
-						}
-						//strcat(dacChannel, v);
-						
-						// setting output voltage
-						// send start condition
-						i2c_start(slaveAddr);
-						if (readInArr == '0') {
-							// command byte
-							i2c_write(0x00);			// set DAC0 output
-						}
-						else {
-							i2c_write(0xff);			// set DAC1 output
-						}
-						// output byte
-						i2c_write(0x10);
-						i2c_stop();
-						
 						// printing
 						i = 0;
 						while (dacChannel[i] != 0) {			// print DAC 1 or DAC 0
 							USART_Transmit(dacChannel[i]);
 							i = i + 1;
 						}
-						i = 0;
-						while (v[i] != 0) {						
-							USART_Transmit(v[i]);
-							i = i + 1;
+						unsigned char space = ' ';
+						USART_Transmit(space);
+						int count;
+						for (count = 0; count < 4; ++count) {
+							USART_Transmit(readInArr[count+4]);
+							v[count] = readInArr[count+4];
 						}
 						strcpy(v, "");							// reset v
 						strcpy(dacChannel, "DAC channel ");		// reset dacChannel
@@ -130,6 +106,24 @@ int main()
 							USART_Transmit(line[i]);
 							i = i + 1;
 						}
+						
+						// I2C: setting output voltage
+						// send start condition
+						float value = atof(v);
+						value = value / 5 * 256;
+						i2c_start(slaveAddr);
+						if (readInArr == '0') {
+							// command byte
+							i2c_write(0x00);			// set DAC0 output
+						}
+						else {
+							i2c_write(value);			// set DAC1 output
+						}
+						// output byte
+						i2c_write(0x10);
+						i2c_stop();
+						
+						
 					}
 					
 				}
