@@ -35,7 +35,9 @@ int main()
 	unsigned char str[20];
 	unsigned char readInArr[20];
 	unsigned char dacChannel[] = "DAC channel ";
-	unsigned char v[5];
+	unsigned char v[5];			// voltage value
+	unsigned char f[3];			// frequency value
+	unsigned char r[4];
 	ADCSRA = 0b10000111;		// enable ADC, set pre-scaler
 	ADMUX = 0b01000000;			// AVcc with external capacitor at AREF pin
 	float high;
@@ -73,6 +75,7 @@ int main()
 				USART_Transmit(str[i]);
 				i = i + 1;
 			}
+			strcpy(str, "\0");
 			
 			i = 0;
 			while (newLine[i] != 0) {		// print "V \n"
@@ -80,6 +83,8 @@ int main()
 				i = i + 1;
 			}		
 		}
+		
+		// command for S, set DAC output voltage
 		else if (readInArr[0] == 'S') {
 			if (readInArr[1] == ',') {
 				if (readInArr[2] == '1' || readInArr[2] == '0') {
@@ -117,18 +122,45 @@ int main()
 							i2c_write(0x00);			// set DAC0 output
 						}
 						else {
-							i2c_write(value);			// set DAC1 output
+							i2c_write(0x01);			// set DAC1 output
 						}
 						// output byte
-						i2c_write(0x10);
+						i2c_write(value);
 						i2c_stop();
-						
-						
 					}
 					
 				}
 			}
 		}
+		
+		else if (readInArr[0] == 'W') {
+			if (readInArr[1] == ',') {
+				if (readInArr[2] == '1' || readInArr[2] == '0') {
+					if (readInArr[3] == ',') {
+						f[0] = readInArr[4];
+						f[1] = readInArr[5];
+						if (readInArr[6] == ',') {
+							int count = 7;
+							int temp = 0;
+							while (readInArr[count] != '\0') {
+								r[temp] = readInArr[count];
+								temp = temp + 1;
+								count = count + 1;
+							}
+							i = 0;
+							while (r[i] != '\0') {					
+								USART_Transmit(r[i]);
+								i = i + 1;
+							}
+							strcpy(r, "\0");
+						}
+					}
+				}
+			}
+		}
+		
+		
+		
 		
 	}
 	
