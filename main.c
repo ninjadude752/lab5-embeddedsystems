@@ -15,6 +15,7 @@
 #include <avr/io.h>
 #include <util/delay.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "twimaster.c"
 //#include "i2cmaster.h"
@@ -34,6 +35,7 @@ int main()
 	unsigned char str[20];
 	unsigned char readInArr[20];
 	unsigned char dacChannel[] = "DAC channel ";
+	unsigned char v[5];
 	ADCSRA = 0b10000111;		// enable ADC, set pre-scaler
 	ADMUX = 0b01000000;			// AVcc with external capacitor at AREF pin
 	float high;
@@ -81,43 +83,58 @@ int main()
 		else if (readInArr[0] == 'S') {
 			if (readInArr[1] == ',') {
 				if (readInArr[2] == '1' || readInArr[2] == '0') {
-					unsigned char temp = readInArr[2];
-					strncat(dacChannel, &temp, 1);
+					if (readInArr[3] == ',') {
+						unsigned char temp = readInArr[2];
+						strncat(dacChannel, &temp, 1);
+						
+						int count;
+						for (count = 0; count < 4; ++count) {
+							v[count] = readInArr[count+4];
+						}
+						i = 0;
+						while (v[i] != 0) {
+							USART_Transmit(v[i]);
+							i = i + 1;
+						}
+						//strcat(dacChannel, v);
+						
+						// setting output voltage
+						// send start condition
+						i2c_start(slaveAddr);
+						if (readInArr == '0') {
+							// command byte
+							i2c_write(0x00);			// set DAC0 output
+						}
+						else {
+							i2c_write(0xff);			// set DAC1 output
+						}
+						// output byte
+						i2c_write(0x10);
+						i2c_stop();
+						
+						// printing
+						i = 0;
+						while (dacChannel[i] != 0) {			// print DAC 1 or DAC 0
+							USART_Transmit(dacChannel[i]);
+							i = i + 1;
+						}
+						i = 0;
+						while (v[i] != 0) {						
+							USART_Transmit(v[i]);
+							i = i + 1;
+						}
+						strcpy(v, "");							// reset v
+						strcpy(dacChannel, "DAC channel ");		// reset dacChannel
+						i = 0;
+						while (line[i] != 0) {					// print new line
+							USART_Transmit(line[i]);
+							i = i + 1;
+						}
+					}
 					
-					// setting output voltage
-					// send start condition
-					i2c_start(slaveAddr);
-					if (readInArr == '0') {
-						// command byte
-						i2c_write(0x00);			// set DAC0 output
-					}
-					else {
-						i2c_write(0xff);			// set DAC1 output
-					}
-					// output byte
-					i2c_write(0x10);
-					i2c_stop();
-					
-					// printing
-					i = 0;
-					while (dacChannel[i] != 0) {			// print DAC 1 or DAC 0
-						USART_Transmit(dacChannel[i]);
-						i = i + 1;
-					}
-					strcpy(dacChannel, "DAC Channel ");
-					i = 0;
-					while (line[i] != 0) {					// print new line
-						USART_Transmit(line[i]);
-						i = i + 1;
-					}
 				}
 			}
-			else {
-				strcpy(readInArr, "");	// empty array
-			}
-			
 		}
-		
 		
 	}
 	
