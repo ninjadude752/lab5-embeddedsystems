@@ -33,7 +33,7 @@ int main()
 	unsigned char newLine[] = "V \n";
 	unsigned char line[] = "\n";
 	unsigned char str[20];
-	unsigned char readInArr[20];
+	unsigned char readInArr[10];
 	unsigned char dacChannel[] = "DAC channel ";
 	unsigned char v[5];			// voltage value
 	unsigned char f[3];			// frequency value
@@ -50,7 +50,6 @@ int main()
 		// ADC
 		int i = 0;
 		unsigned char readIn = USART_Receive();
-		readInArr[0] = readIn;
 		while (readIn != '\n'){
 			readInArr[i] = readIn;
 			i = i + 1;
@@ -58,7 +57,6 @@ int main()
 		}
 		
 		if (readInArr[0] == 'G') {
-			strcpy(readInArr, "");
 			ADCSRA = 0b11000111;
 			while (ADCSRA == 0b11000111);	// wait until the second bit is low
 			high = ADC;
@@ -75,13 +73,14 @@ int main()
 				USART_Transmit(str[i]);
 				i = i + 1;
 			}
-			strcpy(str, "\0");
-			
+
 			i = 0;
 			while (newLine[i] != 0) {		// print "V \n"
 				USART_Transmit(newLine[i]);
 				i = i + 1;
-			}		
+			}
+			strcpy(str, "\0");
+			strcpy(readInArr, "\0");		
 		}
 		
 		// command for S, set DAC output voltage
@@ -92,7 +91,7 @@ int main()
 						unsigned char temp = readInArr[2];
 						strncat(dacChannel, &temp, 1);
 						// printing
-						i = 0;
+						int i = 0;
 						while (dacChannel[i] != 0) {			// print DAC 1 or DAC 0
 							USART_Transmit(dacChannel[i]);
 							i = i + 1;
@@ -104,17 +103,17 @@ int main()
 							USART_Transmit(readInArr[count+4]);
 							v[count] = readInArr[count+4];
 						}
-						strcpy(v, "");							// reset v
-						strcpy(dacChannel, "DAC channel ");		// reset dacChannel
+						
 						i = 0;
 						while (line[i] != 0) {					// print new line
 							USART_Transmit(line[i]);
 							i = i + 1;
 						}
 						
+						
 						// I2C: setting output voltage
 						// send start condition
-						float value = atof(v);
+						int value = atof(v);
 						value = value / 5 * 256;
 						i2c_start(slaveAddr);
 						if (readInArr == '0') {
@@ -125,14 +124,20 @@ int main()
 							i2c_write(0x01);			// set DAC1 output
 						}
 						// output byte
-						i2c_write(value);
+						i2c_write(0x00);			
 						i2c_stop();
+						
+						strcpy(v, "");							// reset v
+						strcpy(readInArr, "\0");
+						strcpy(dacChannel, "DAC channel ");		// reset dacChannel
+						
 					}
 					
 				}
 			}
 		}
 		
+		// command for W, generate a sine wave on DAC output
 		else if (readInArr[0] == 'W') {
 			if (readInArr[1] == ',') {
 				if (readInArr[2] == '1' || readInArr[2] == '0') {
@@ -140,19 +145,20 @@ int main()
 						f[0] = readInArr[4];
 						f[1] = readInArr[5];
 						if (readInArr[6] == ',') {
-							int count = 7;
-							int temp = 0;
-							while (readInArr[count] != '\0') {
-								r[temp] = readInArr[count];
-								temp = temp + 1;
-								count = count + 1;
-							}
-							i = 0;
-							while (r[i] != '\0') {					
-								USART_Transmit(r[i]);
+							int i = 0;
+							while (readInArr[i] != 0) {					// print new line
+								USART_Transmit(readInArr[i]);
 								i = i + 1;
 							}
-							strcpy(r, "\0");
+							
+							i = 0;
+							while (line[i] != 0) {					// print new line
+								USART_Transmit(line[i]);
+								i = i + 1;
+							}
+							
+							strcpy(readInArr, "");
+
 						}
 					}
 				}
@@ -162,9 +168,9 @@ int main()
 		
 		
 		
-	}
-	
+	}	
 }
+
  void USART_Init(unsigned int ubrr) {
 	/*set baud rate*/
 	UBRR0H = (unsigned char) (ubrr>>8);
