@@ -120,7 +120,7 @@ int main()
 						
 						// I2C: setting output voltage
 						// send start condition
-						int value = atof(v);
+						float value = atof(v);
 						value = value / 5 * 256;
 						i2c_start(slaveAddr);
 						if (readInArr == '0') {
@@ -128,13 +128,13 @@ int main()
 							i2c_write(0x00);			// set DAC0 output
 						}
 						else {
-							i2c_write(0x01);			// set DAC1 output
+							i2c_write(1);			// set DAC1 output
 						}
 						// output byte
-						i2c_write(0x00);			
+						i2c_write(value);					
 						i2c_stop();
 						
-						strcpy(v, "");							// reset v
+						strcpy(v, "\n");							// reset v
 						strcpy(dacChannel, "DAC channel ");		// reset dacChannel
 						
 					}
