@@ -35,6 +35,9 @@ int main()
 	unsigned char str[20];
 	unsigned char readInArr[10];
 	unsigned char dacChannel[] = "DAC channel ";
+	unsigned char generate[] = "Generating ";
+	unsigned char sineWave[] = " sine wave cycles with f = ";
+	unsigned char hz[] = " Hz on DAC channel ";
 	unsigned char v[5];			// voltage value
 	unsigned char f[3];			// frequency value
 	unsigned char r[4];
@@ -47,6 +50,10 @@ int main()
 	i2c_init();
 	
 	while(1){
+		// reset readInArr
+		for (int j = 0; j < 10; ++j) {
+			readInArr[j] = "\n";
+		}
 		// ADC
 		int i = 0;
 		unsigned char readIn = USART_Receive();
@@ -128,7 +135,6 @@ int main()
 						i2c_stop();
 						
 						strcpy(v, "");							// reset v
-						strcpy(readInArr, "\0");
 						strcpy(dacChannel, "DAC channel ");		// reset dacChannel
 						
 					}
@@ -145,19 +151,48 @@ int main()
 						f[0] = readInArr[4];
 						f[1] = readInArr[5];
 						if (readInArr[6] == ',') {
+							int count = 7;
+							int temp = 0;
+							while (readInArr[count] != '\0') {
+								r[temp] = readInArr[count];
+								temp = temp + 1;
+								count = count + 1;
+							}
+							
 							int i = 0;
-							while (readInArr[i] != 0) {					// print new line
-								USART_Transmit(readInArr[i]);
+							while (generate[i] != 0) {
+								USART_Transmit(generate[i]);
 								i = i + 1;
 							}
+							
+							i = 0;
+							while (r[i] != '\0') {					// number of waveform cycles 
+								USART_Transmit(r[i]);
+								i = i + 1;
+							}
+							
+							i = 0;
+							while (sineWave[i] != 0) {				
+								USART_Transmit(sineWave[i]);
+								i = i + 1;
+							}
+							
+							USART_Transmit(f[0]);					// frequency of the waveform
+							USART_Transmit(f[1]);
+							
+							i = 0;
+							while (hz[i] != 0) {
+								USART_Transmit(hz[i]);
+								i = i + 1;
+							}
+							
+							USART_Transmit(readInArr[2]);			// channel number
 							
 							i = 0;
 							while (line[i] != 0) {					// print new line
 								USART_Transmit(line[i]);
 								i = i + 1;
 							}
-							
-							strcpy(readInArr, "");
 
 						}
 					}
